@@ -39,14 +39,16 @@ module.exports = function(layoutData, opts) {
   };
   let viewportWidth = modConfig.viewportWidth || 375;
   let designWidth = modConfig.designWidth;
-  let htmlFontsize = viewportWidth ? viewportWidth / 10 : null;
+  // let htmlFontsize = viewportWidth ? viewportWidth / 10 : null;
+  let htmlFontsize = 50; // 目前暂时用2倍稿(750*1334)
 
   let dslMessage = genertePartJson(layoutData);
   renderData = {
     template: printer(dslMessage._rXML),
     mockDataScript: printer(dslMessage._rMockData),
     script: printer(dslMessage._rScript),
-    style: printer(dslMessage._rStyle)
+    // style: printer(dslMessage._rStyle)
+    style: printer(dslMessage._rRemStyle)
   };
 
   let vuejs = printer([
@@ -58,7 +60,7 @@ module.exports = function(layoutData, opts) {
     ...dslMessage._rMockData,
     ...dslMessage._rScript,
     _line('</script>', { indent: { tab: 0 } }),
-    _line('<style scoped>', { indent: { tab: 0 } }),
+    _line('<style lang="scss" scoped>', { indent: { tab: 0 } }),
     ...dslMessage._rStyle,
     _line('</style>', { indent: { tab: 0 } })
   ]);
@@ -72,7 +74,7 @@ module.exports = function(layoutData, opts) {
     ...dslMessage._rMockData,
     ...dslMessage._rScript,
     _line('</script>', { indent: { tab: 0 } }),
-    _line('<style scoped>', { indent: { tab: 0 } }),
+    _line('<style lang="scss" scoped>', { indent: { tab: 0 } }),
     ...dslMessage._rRemStyle,
     _line('</style>', { indent: { tab: 0 } })
   ]);
@@ -192,8 +194,15 @@ module.exports = function(layoutData, opts) {
       let result = [];
       let remResult = [
         _line(
-          `/* 视觉稿宽度为 ${designWidth}, 请设置html的font-size为 ${htmlFontsize}px, 以便在布局视口宽度为 ${viewportWidth} 的页面中自适应 */`
-        )
+          `/* 视觉稿宽度为 ${designWidth}, 请设置html的font-size为 ${htmlFontsize}px, 以便在布局视口宽度为 ${viewportWidth} 的页面中自适应, 目前暂时用2倍稿(750*1334) */`
+        ),
+        _line(''),
+        _line('/* @import "../../assets/sass/function"; */', { indent: { tab: 0 } }),
+        _line(''),
+        _line('@function rem ($num) {', { indent: { tab: 0 } }),
+        _line(`@return $num/100 * 1rem;`, { indent: { tab: 1 } }),
+        _line('}', { indent: { tab: 0 } }),
+        _line('')
       ];
       cssStore.map((v, i) => {
         let styleCssLine = [];
@@ -242,7 +251,8 @@ module.exports = function(layoutData, opts) {
         } else {
           let valueNum =
             typeof value == 'string' ? value.replace(/(px)|(rem)/, '') : value;
-          if (valueNum == 1 || ['fontSize'].indexOf(key) > -1) {
+          // if (valueNum == 1 || ['fontSize'].indexOf(key) > -1) {
+          if (valueNum == 1) {
             return valueNum + 'px';
           }
           if (
@@ -252,10 +262,7 @@ module.exports = function(layoutData, opts) {
           ) {
             value = parseFloat(value);
             return htmlFontsize
-              ? (
-                  (value * (viewportWidth / designWidth)) /
-                  htmlFontsize
-                ).toFixed(2) + 'rem'
+              ? `rem(${value.toFixed(2)})`
               : value + 'px';
           } else {
             return value;
